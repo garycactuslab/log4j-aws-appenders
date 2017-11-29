@@ -30,7 +30,7 @@ import com.kdgregory.log4j.aws.internal.shared.LogMessage;
 import com.kdgregory.log4j.testhelpers.HeaderFooterLayout;
 import com.kdgregory.log4j.testhelpers.InlineThreadFactory;
 import com.kdgregory.log4j.testhelpers.NullThreadFactory;
-import com.kdgregory.log4j.testhelpers.aws.ThrowingWriterFactory;
+import com.kdgregory.log4j.testhelpers.ThrowingWriterFactory;
 import com.kdgregory.log4j.testhelpers.aws.kinesis.MockKinesisClient;
 import com.kdgregory.log4j.testhelpers.aws.kinesis.MockKinesisWriter;
 import com.kdgregory.log4j.testhelpers.aws.kinesis.MockKinesisWriterFactory;
@@ -111,18 +111,18 @@ public class TestKinesisAppender
     public void testAppend() throws Exception
     {
         initialize("TestKinesisAppender/testAppend.properties");
-        MockKinesisWriterFactory writerFactory = appender.getWriterFactory();
+        MockKinesisWriterFactory writerFactory = (MockKinesisWriterFactory)appender.getWriterFactory();
 
         long initialTimestamp = System.currentTimeMillis();
 
         // this sleep is to make timestamps discernable
         Thread.sleep(100);
 
-        assertNull("before messages, writer is null",                           appender.getWriter());
+        assertNull("before messages, writer is null",                           appender.getMockWriter());
 
         logger.debug("first message");
 
-        MockKinesisWriter writer = appender.getWriter();
+        MockKinesisWriter writer = appender.getMockWriter();
 
         assertNotNull("after message 1, writer is initialized",                 writer);
         assertEquals("after message 1, calls to writer factory",                1,              writerFactory.invocationCount);
@@ -182,7 +182,7 @@ public class TestKinesisAppender
         logger.debug("blah blah blah");
 
         // must retrieve writer before we shut down
-        MockKinesisWriter writer = appender.getWriter();
+        MockKinesisWriter writer = appender.getMockWriter();
         LogManager.shutdown();
 
         assertEquals("number of messages written to log", 3, writer.messages.size());
@@ -231,7 +231,7 @@ public class TestKinesisAppender
             Thread.sleep(10);
         }
 
-        assertNull("writer has been reset",         appender.getWriter());
+        assertNull("writer has been reset",         appender.getMockWriter());
         assertEquals("last writer exception class", IllegalStateException.class, appender.getLastWriterException().getClass());
     }
 

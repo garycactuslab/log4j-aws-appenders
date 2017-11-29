@@ -21,7 +21,7 @@ import com.kdgregory.log4j.aws.internal.shared.LogMessage;
 import com.kdgregory.log4j.aws.internal.sns.SNSWriterConfig;
 import com.kdgregory.log4j.testhelpers.HeaderFooterLayout;
 import com.kdgregory.log4j.testhelpers.InlineThreadFactory;
-import com.kdgregory.log4j.testhelpers.aws.ThrowingWriterFactory;
+import com.kdgregory.log4j.testhelpers.ThrowingWriterFactory;
 import com.kdgregory.log4j.testhelpers.aws.sns.MockSNSClient;
 import com.kdgregory.log4j.testhelpers.aws.sns.MockSNSWriter;
 import com.kdgregory.log4j.testhelpers.aws.sns.MockSNSWriterFactory;
@@ -80,13 +80,13 @@ public class TestSNSAppender
     public void testAppend() throws Exception
     {
         initialize("TestSNSAppender/testAppend.properties");
-        MockSNSWriterFactory writerFactory = appender.getWriterFactory();
+        MockSNSWriterFactory writerFactory = (MockSNSWriterFactory)appender.getWriterFactory();
 
-        assertNull("before messages, writer is null",                   appender.getWriter());
+        assertNull("before messages, writer is null",                   appender.getMockWriter());
 
         logger.debug("first message");
 
-        MockSNSWriter writer = appender.getWriter();
+        MockSNSWriter writer = appender.getMockWriter();
 
         assertNotNull("after message 1, writer is initialized",         writer);
         assertEquals("after message 1, calls to writer factory",        1,                  writerFactory.invocationCount);
@@ -128,7 +128,7 @@ public class TestSNSAppender
         logger.debug("message");
 
         // must retrieve writer before we shut down
-        MockSNSWriter writer = appender.getWriter();
+        MockSNSWriter writer = appender.getMockWriter();
         LogManager.shutdown();
 
         assertEquals("number of messages written to log",   3,                          writer.messages.size());
@@ -298,7 +298,7 @@ public class TestSNSAppender
             Thread.sleep(10);
         }
 
-        assertNull("writer has been reset",         appender.getWriter());
+        assertNull("writer has been reset",         appender.getMockWriter());
         assertEquals("last writer exception class", IllegalStateException.class, appender.getLastWriterException().getClass());
     }
 }

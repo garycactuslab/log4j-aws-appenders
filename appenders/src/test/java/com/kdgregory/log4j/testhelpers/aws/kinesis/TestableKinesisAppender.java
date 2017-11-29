@@ -1,21 +1,21 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.log4j.testhelpers.aws.kinesis;
 
-import java.lang.reflect.Field;
-
 import com.kdgregory.log4j.aws.KinesisAppender;
 import com.kdgregory.log4j.aws.internal.kinesis.KinesisWriterConfig;
-import com.kdgregory.log4j.aws.internal.shared.AbstractLogWriter;
+import com.kdgregory.log4j.aws.internal.shared.LogWriter;
 import com.kdgregory.log4j.aws.internal.shared.MessageQueue;
 import com.kdgregory.log4j.aws.internal.shared.ThreadFactory;
 import com.kdgregory.log4j.aws.internal.shared.WriterFactory;
+import com.kdgregory.log4j.testhelpers.Utils;
 
 
 /**
  *  This class provides visibility into the protected variables held by
  *  KinesisAppender and AbstractAppender.
  */
-public class TestableKinesisAppender extends KinesisAppender
+public class TestableKinesisAppender
+extends KinesisAppender
 {
 
     public void setThreadFactory(ThreadFactory threadFactory)
@@ -30,13 +30,19 @@ public class TestableKinesisAppender extends KinesisAppender
     }
 
 
-    public MockKinesisWriterFactory getWriterFactory()
+    public WriterFactory<KinesisWriterConfig> getWriterFactory()
     {
-        return (MockKinesisWriterFactory)writerFactory;
+        return writerFactory;
     }
 
 
-    public MockKinesisWriter getWriter()
+    public LogWriter getWriter()
+    {
+        return writer;
+    }
+
+
+    public MockKinesisWriter getMockWriter()
     {
         return (MockKinesisWriter)writer;
     }
@@ -44,17 +50,8 @@ public class TestableKinesisAppender extends KinesisAppender
 
     public MessageQueue getMessageQueue()
     {
-        // note: will only work with the regular KinesisLogWriter
-        try
-        {
-            Field field = AbstractLogWriter.class.getDeclaredField("messageQueue");
-            field.setAccessible(true);
-            return (MessageQueue)field.get(writer);
-        }
-        catch (Exception ex)
-        {
-            throw new RuntimeException(ex);
-        }
+        // note: only works with the actual KinesisLogWriter
+        return Utils.getField(writer, "messageQueue", MessageQueue.class);
     }
 
 
