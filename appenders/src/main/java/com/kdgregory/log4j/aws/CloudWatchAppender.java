@@ -13,129 +13,136 @@ import com.kdgregory.log4j.aws.internal.shared.LogWriter;
 import com.kdgregory.log4j.aws.internal.shared.Substitutions;
 import com.kdgregory.log4j.aws.internal.shared.WriterFactory;
 
-
 /**
- *  Appender that writes to a CloudWatch log stream.
+ * Appender that writes to a CloudWatch log stream.
  */
-public class CloudWatchAppender extends AbstractAppender<CloudWatchWriterConfig>
-{
-    // these are the only configuration vars specific to this appender
+public class CloudWatchAppender extends AbstractAppender<CloudWatchWriterConfig> {
+	// these are the only configuration vars specific to this appender
 
-    private String          logGroup;
-    private String          logStream;
+	private String logGroup;
+	private String logStream;
+	private String accessKey;
+	private String secretKey;
+	private String region;
 
-    // these variables hold the post-substitution log-group and log-stream names
-    // (mostly useful for testing)
+	// these variables hold the post-substitution log-group and log-stream names
+	// (mostly useful for testing)
 
-    private String  actualLogGroup;
-    private String  actualLogStream;
+	private String actualLogGroup;
+	private String actualLogStream;
 
+	/**
+	 * Base constructor: assigns default values to configuration properties.
+	 */
+	public CloudWatchAppender() {
+		super(new DefaultThreadFactory(), new WriterFactory<CloudWatchWriterConfig>() {
+			@Override
+			public LogWriter newLogWriter(CloudWatchWriterConfig config) {
+				return new CloudWatchLogWriter(config);
+			}
+		});
 
-    /**
-     *  Base constructor: assigns default values to configuration properties.
-     */
-    public CloudWatchAppender()
-    {
-        super(new DefaultThreadFactory(),
-              new WriterFactory<CloudWatchWriterConfig>()
-                  {
-                        @Override
-                        public LogWriter newLogWriter(CloudWatchWriterConfig config)
-                        {
-                            return new CloudWatchLogWriter(config);
-                        }
-                   });
+		logStream = "{startupTimestamp}";
+	}
 
-        logStream = "{startupTimestamp}";
-    }
+	// ----------------------------------------------------------------------------
+	// Configuration
+	// ----------------------------------------------------------------------------
 
+	/**
+	 * Sets the CloudWatch Log Group associated with this appender.
+	 * <p>
+	 * You typically assign a single log group to an application, and then use
+	 * multiple log streams for instances of that application.
+	 * <p>
+	 * There is no default value. If you do not configure the log group, the
+	 * appender will be disabled and will report its misconfiguration.
+	 */
+	public void setLogGroup(String value) {
+		logGroup = value;
+	}
 
-//----------------------------------------------------------------------------
-//  Configuration
-//----------------------------------------------------------------------------
+	/**
+	 * Returns the log group name; see {@link #setLogGroup}. Primarily used for
+	 * testing.
+	 */
+	public String getLogGroup() {
+		return logGroup;
+	}
 
-    /**
-     *  Sets the CloudWatch Log Group associated with this appender.
-     *  <p>
-     *  You typically assign a single log group to an application, and then
-     *  use multiple log streams for instances of that application.
-     *  <p>
-     *  There is no default value. If you do not configure the log group, the
-     *  appender will be disabled and will report its misconfiguration.
-     */
-    public void setLogGroup(String value)
-    {
-        logGroup = value;
-    }
+	/**
+	 * Sets the CloudWatch Log Stream associated with this appender.
+	 * <p>
+	 * You typically create a separate log stream for each instance of the
+	 * application.
+	 * <p>
+	 * Default value is <code>{startTimestamp}</code>, the JVM startup
+	 * timestamp.
+	 */
+	public void setLogStream(String value) {
+		logStream = value;
+	}
 
+	/**
+	 * Returns the log stream name; see {@link #setLogStream}. Primarily used
+	 * for testing.
+	 */
+	public String getLogStream() {
+		return logStream;
+	}
 
-    /**
-     *  Returns the log group name; see {@link #setLogGroup}. Primarily used
-     *  for testing.
-     */
-    public String getLogGroup()
-    {
-        return logGroup;
-    }
+	// ----------------------------------------------------------------------------
+	// Appender-specific methods
+	// ----------------------------------------------------------------------------
 
+	/**
+	 * Rotates the log stream: flushes all outstanding messages to the current
+	 * stream, and opens a new stream. This is called internally, and exposed
+	 * for testing.
+	 */
+	@Override
+	public void rotate() {
+		super.rotate();
+	}
 
-    /**
-     *  Sets the CloudWatch Log Stream associated with this appender.
-     *  <p>
-     *  You typically create a separate log stream for each instance of the
-     *  application.
-     *  <p>
-     *  Default value is <code>{startTimestamp}</code>, the JVM startup timestamp.
-     */
-    public void setLogStream(String value)
-    {
-        logStream = value;
-    }
+	// ----------------------------------------------------------------------------
+	// Subclass hooks
+	// ----------------------------------------------------------------------------
 
+	@Override
+	protected CloudWatchWriterConfig generateWriterConfig() {
+		Substitutions subs = new Substitutions(new Date(), sequence.get());
+		actualLogGroup = CloudWatchConstants.ALLOWED_NAME_REGEX.matcher(subs.perform(logGroup)).replaceAll("");
+		actualLogStream = CloudWatchConstants.ALLOWED_NAME_REGEX.matcher(subs.perform(logStream)).replaceAll("");
+		return new CloudWatchWriterConfig(actualLogGroup, actualLogStream, batchDelay, discardThreshold, discardAction, accessKey, secretKey, region);
+	}
 
-    /**
-     *  Returns the log stream name; see {@link #setLogStream}. Primarily used
-     *  for testing.
-     */
-    public String getLogStream()
-    {
-        return logStream;
-    }
+	@Override
+	protected boolean isMessageTooLarge(LogMessage message) {
+		return (message.size() + CloudWatchConstants.MESSAGE_OVERHEAD) >= CloudWatchConstants.MAX_BATCH_BYTES;
+	}
 
+	public String getAccessKey() {
+		return accessKey;
+	}
 
-//----------------------------------------------------------------------------
-//  Appender-specific methods
-//----------------------------------------------------------------------------
+	public void setAccessKey(String accessKey) {
+		this.accessKey = accessKey;
+	}
 
-    /**
-     *  Rotates the log stream: flushes all outstanding messages to the current
-     *  stream, and opens a new stream. This is called internally, and exposed
-     *  for testing.
-     */
-    @Override
-    public void rotate()
-    {
-        super.rotate();
-    }
+	public String getSecretKey() {
+		return secretKey;
+	}
 
+	public void setSecretKey(String secretKey) {
+		this.secretKey = secretKey;
+	}
 
-//----------------------------------------------------------------------------
-//  Subclass hooks
-//----------------------------------------------------------------------------
+	public String getRegion() {
+		return region;
+	}
 
-    @Override
-    protected CloudWatchWriterConfig generateWriterConfig()
-    {
-        Substitutions subs = new Substitutions(new Date(), sequence.get());
-        actualLogGroup  = CloudWatchConstants.ALLOWED_NAME_REGEX.matcher(subs.perform(logGroup)).replaceAll("");
-        actualLogStream = CloudWatchConstants.ALLOWED_NAME_REGEX.matcher(subs.perform(logStream)).replaceAll("");
-        return new CloudWatchWriterConfig(actualLogGroup, actualLogStream, batchDelay, discardThreshold, discardAction);
-    }
-
-
-    @Override
-    protected boolean isMessageTooLarge(LogMessage message)
-    {
-        return (message.size() + CloudWatchConstants.MESSAGE_OVERHEAD)  >= CloudWatchConstants.MAX_BATCH_BYTES;
-    }
+	public void setRegion(String region) {
+		this.region = region;
+	}
 }
